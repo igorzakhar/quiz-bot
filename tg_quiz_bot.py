@@ -1,5 +1,6 @@
 import os
 
+import telegram
 from dotenv import load_dotenv
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import logging
@@ -10,7 +11,14 @@ logger = logging.getLogger(__name__)
 
 def start(bot, update):
     """Send a message when the command /start is issued."""
-    update.message.reply_text('Hi!')
+    keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счёт']]
+    reply_markup = telegram.ReplyKeyboardMarkup(keyboard, resize_keyboard=True
+                                                )
+    bot.send_message(
+        chat_id=update.message.chat_id,
+        text='Привет! Я бот для проведения викторины.',
+        reply_markup=reply_markup
+    )
 
 
 def help(bot, update):
