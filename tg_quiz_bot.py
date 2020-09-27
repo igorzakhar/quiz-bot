@@ -1,9 +1,13 @@
+import functools
+import logging
 import os
+import random
 
 import telegram
 from dotenv import load_dotenv
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-import logging
+
+from load_questions import load_questions
 
 
 logger = logging.getLogger(__name__)
@@ -12,8 +16,7 @@ logger = logging.getLogger(__name__)
 def start(bot, update):
     """Send a message when the command /start is issued."""
     keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счёт']]
-    reply_markup = telegram.ReplyKeyboardMarkup(keyboard, resize_keyboard=True
-                                                )
+    reply_markup = telegram.ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     bot.send_message(
         chat_id=update.message.chat_id,
         text='Привет! Я бот для проведения викторины.',
@@ -26,9 +29,13 @@ def help(bot, update):
     update.message.reply_text('Help!')
 
 
-def echo(bot, update):
-    """Echo the user message."""
-    update.message.reply_text(update.message.text)
+def ask_question(bot, update, questions):
+    if update.message.text == 'Новый вопрос':
+        question = random.choice(list(questions.keys()))
+        update.message.reply_text(question)
+
+    else:
+        update.message.reply_text(update.message.text)
 
 
 def error(bot, update, error):
@@ -38,6 +45,8 @@ def error(bot, update, error):
 
 def main():
     load_dotenv()
+
+    questions = load_questions()
 
     """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
@@ -51,8 +60,8 @@ def main():
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help))
 
-    # on noncommand i.e message - echo the message on Telegram
-    dp.add_handler(MessageHandler(Filters.text, echo))
+    ask_question_handler = functools.partial(ask_question, questions=questions)
+    dp.add_handler(MessageHandler(Filters.text, ask_question_handler))
 
     # log all errors
     dp.add_error_handler(error)
