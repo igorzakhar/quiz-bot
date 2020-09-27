@@ -3,6 +3,7 @@ import logging
 import os
 import random
 
+import redis
 import telegram
 from dotenv import load_dotenv
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
@@ -29,10 +30,18 @@ def help(bot, update):
     update.message.reply_text('Help!')
 
 
-def ask_question(bot, update, questions):
+def ask_question(bot, update, questions, redis_conn):
     if update.message.text == 'Новый вопрос':
-        question = random.choice(list(questions.keys()))
+        question, answer = random.choice(list(questions.items()))
         update.message.reply_text(question)
+        redis_conn.set(
+            update.message.from_user.id,
+            question
+        )
+        q = redis_conn.get(update.message.from_user.id)
+        update.message.reply_text(questions.get(q.decode("utf-8")))
+
+        logger.debug(f'{update.message.from_user.id} {question} {answer}')
 
     else:
         update.message.reply_text(update.message.text)
@@ -45,12 +54,22 @@ def error(bot, update, error):
 
 def main():
     load_dotenv()
-
     questions = load_questions()
+
+    tg_token = os.getenv('TELEGRAM_TOKEN')
+    redis_host = os.getenv('REDIS_HOST')
+    redis_port = os.getenv('REDIS_PORT')
+    redis_password = os.getenv('REDIS_PASSWORD')
+
+    redis_conn = redis.Redis(
+        host=redis_host,
+        port=redis_port,
+        password=redis_password,
+        db=0
+    )
 
     """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
-    tg_token = os.getenv('TELEGRAM_TOKEN')
     updater = Updater(tg_token)
 
     # Get the dispatcher to register handlers
@@ -60,7 +79,11 @@ def main():
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help))
 
-    ask_question_handler = functools.partial(ask_question, questions=questions)
+    ask_question_handler = functools.partial(
+        ask_question,
+        questions=questions,
+        redis_conn=redis_conn
+    )
     dp.add_handler(MessageHandler(Filters.text, ask_question_handler))
 
     # log all errors
@@ -76,6 +99,7 @@ def main():
 
 
 if __name__ == '__main__':
+    logging.getLogger(__name__).setLevel(logging.DEBUG)
     logging.basicConfig(
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO
