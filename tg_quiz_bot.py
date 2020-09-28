@@ -2,6 +2,7 @@ import functools
 import logging
 import os
 import random
+import re
 
 import redis
 import telegram
@@ -12,6 +13,10 @@ from load_questions import load_questions
 
 
 logger = logging.getLogger(__name__)
+
+
+def remove_comments(answer):
+    return re.sub("[\(\[].*?[\)\]]", "", answer).strip()
 
 
 def start(bot, update):
@@ -32,19 +37,37 @@ def help(bot, update):
 
 def ask_question(bot, update, questions, redis_conn):
     if update.message.text == 'Новый вопрос':
-        question, answer = random.choice(list(questions.items()))
-        update.message.reply_text(question)
-        redis_conn.set(
-            update.message.from_user.id,
-            question
-        )
-        q = redis_conn.get(update.message.from_user.id)
-        update.message.reply_text(questions.get(q.decode("utf-8")))
+        question = random.choice(list(questions.keys()))
+        user_id = update.message.from_user.id
 
-        logger.debug(f'{update.message.from_user.id} {question} {answer}')
+        update.message.reply_text(question)
+        redis_conn.set(user_id, question)
+
+        logger.debug(
+            f'user_id: {user_id}. '
+            f'Question: {question} '
+            f'Answer: {questions.get(question)}'
+        )
 
     else:
-        update.message.reply_text(update.message.text)
+        current_question = redis_conn.get(update.message.from_user.id)
+        answer = questions.get(current_question.decode("utf-8"))
+
+        user_response = update.message.text.lower()
+        correct_answer = remove_comments(answer).lower().strip('.')
+
+        logger.debug(
+            f'User response: {user_response} '
+            f'Correct answer: {correct_answer}'
+        )
+
+        if user_response == correct_answer:
+            update.message.reply_text(
+                'Правильно! Поздравляю! '
+                'Для следующего вопроса нажми «Новый вопрос».'
+            )
+        else:
+            update.message.reply_text('Неправильно. Попробуешь ещё раз?')
 
 
 def error(bot, update, error):
