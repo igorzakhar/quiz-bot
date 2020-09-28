@@ -5,14 +5,23 @@ import random
 import re
 
 import redis
-import telegram
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from dotenv import load_dotenv
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext import (
+    Updater,
+    CommandHandler,
+    MessageHandler,
+    RegexHandler,
+    Filters,
+    ConversationHandler
+)
 
 from load_questions import load_questions
 
 
 logger = logging.getLogger(__name__)
+
+CHOOSING, ATTEMPT = range(2)
 
 
 def remove_comments(answer):
@@ -22,52 +31,71 @@ def remove_comments(answer):
 def start(bot, update):
     """Send a message when the command /start is issued."""
     keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счёт']]
-    reply_markup = telegram.ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    bot.send_message(
-        chat_id=update.message.chat_id,
-        text='Привет! Я бот для проведения викторины.',
-        reply_markup=reply_markup
+    kb_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    start_message = (
+        'Приветствую! Нажмите «Новый вопрос» для начала викторины.\n'
+        '/cancel - для отмены.'
+    )
+    update.message.reply_text(start_message, reply_markup=kb_markup)
+
+    return CHOOSING
+
+
+def handle_new_question_request(bot, update, questions, redis_conn):
+    question = random.choice(list(questions.keys()))
+
+    logger.debug(
+        f'user_id: {update.message.from_user.id}. '
+        f'Question: {question} '
+        f'Answer: {questions.get(question)}'
     )
 
+    redis_conn.set(update.message.from_user.id, question)
+    update.message.reply_text(question)
 
-def help(bot, update):
-    """Send a message when the command /help is issued."""
-    update.message.reply_text('Help!')
+    return ATTEMPT
 
 
-def ask_question(bot, update, questions, redis_conn):
-    if update.message.text == 'Новый вопрос':
-        question = random.choice(list(questions.keys()))
-        user_id = update.message.from_user.id
+def handle_solution_attempt(bot, update, questions, redis_conn):
+    current_question = redis_conn.get(update.message.from_user.id)
+    answer = questions.get(current_question)
+    user_response = update.message.text
+    correct_answer = remove_comments(answer).lower().strip('.')
 
-        update.message.reply_text(question)
-        redis_conn.set(user_id, question)
+    logger.debug(
+        f'User response: {user_response} '
+        f'Correct answer: {correct_answer}'
+    )
 
-        logger.debug(
-            f'user_id: {user_id}. '
-            f'Question: {question} '
-            f'Answer: {questions.get(question)}'
+    if user_response.lower() == correct_answer:
+        update.message.reply_text(
+            'Правильно! Поздравляю! '
+            'Для следующего вопроса нажми «Новый вопрос».'
         )
-
+        return CHOOSING
     else:
-        current_question = redis_conn.get(update.message.from_user.id)
-        answer = questions.get(current_question.decode("utf-8"))
+        update.message.reply_text('Неправильно. Попробуешь ещё раз?')
 
-        user_response = update.message.text.lower()
-        correct_answer = remove_comments(answer).lower().strip('.')
+        return ATTEMPT
 
-        logger.debug(
-            f'User response: {user_response} '
-            f'Correct answer: {correct_answer}'
-        )
 
-        if user_response == correct_answer:
-            update.message.reply_text(
-                'Правильно! Поздравляю! '
-                'Для следующего вопроса нажми «Новый вопрос».'
-            )
-        else:
-            update.message.reply_text('Неправильно. Попробуешь ещё раз?')
+def handle_give_up(bot, update, questions, redis_conn):
+    current_question = redis_conn.get(update.message.from_user.id)
+    answer = questions.get(current_question)
+    update.message.reply_text(
+        f'Вот тебе правильный ответ: {answer} '
+        'Чтобы продолжить нажми «Новый вопрос»'
+    )
+
+    return CHOOSING
+
+
+def cancel(bot, update):
+    update.message.reply_text(
+        f'До свидания, {update.message.from_user.first_name}!',
+        reply_markup=ReplyKeyboardRemove()
+    )
+    return ConversationHandler.END
 
 
 def error(bot, update, error):
@@ -88,7 +116,8 @@ def main():
         host=redis_host,
         port=redis_port,
         password=redis_password,
-        db=0
+        charset='utf-8',
+        decode_responses=True
     )
 
     """Start the bot."""
@@ -98,16 +127,41 @@ def main():
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
 
-    # on different commands - answer in Telegram
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help))
-
-    ask_question_handler = functools.partial(
-        ask_question,
+    handle_new_question = functools.partial(
+        handle_new_question_request,
         questions=questions,
         redis_conn=redis_conn
     )
-    dp.add_handler(MessageHandler(Filters.text, ask_question_handler))
+
+    handle_solution = functools.partial(
+        handle_solution_attempt,
+        questions=questions,
+        redis_conn=redis_conn
+    )
+
+    handle_giveup = functools.partial(
+        handle_give_up,
+        questions=questions,
+        redis_conn=redis_conn
+    )
+
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+
+        states={
+            CHOOSING: [RegexHandler('^Новый вопрос$', handle_new_question)],
+
+            ATTEMPT: [
+                RegexHandler('^Сдаться$', handle_giveup),
+                MessageHandler(Filters.text, handle_solution)
+            ]
+        },
+
+        fallbacks=[CommandHandler('cancel', cancel)]
+
+    )
+
+    dp.add_handler(conv_handler)
 
     # log all errors
     dp.add_error_handler(error)
