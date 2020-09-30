@@ -97,10 +97,10 @@ def handle_give_up(event, vk, questions, redis_conn):
     )
 
 
-def main():
-    load_dotenv()
-
-    questions = load_questions()
+def run_chatbot(token, questions):
+    vk_session = vk_api.VkApi(token=token)
+    api_vk = vk_session.get_api()
+    longpoll = VkLongPoll(vk_session)
 
     redis_host = os.getenv('REDIS_HOST')
     redis_port = os.getenv('REDIS_PORT')
@@ -114,12 +114,6 @@ def main():
         decode_responses=True
     )
 
-    vk_token = os.getenv('VK_TOKEN')
-
-    vk_session = vk_api.VkApi(token=vk_token)
-    api_vk = vk_session.get_api()
-    longpoll = VkLongPoll(vk_session)
-
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             if event.text == 'Новый вопрос':
@@ -128,6 +122,22 @@ def main():
                 handle_give_up(event, api_vk, questions, redis_conn)
             else:
                 handle_solution_attempt(event, api_vk, questions, redis_conn)
+
+
+def main():
+    load_dotenv()
+    questions = load_questions()
+    vk_token = os.getenv('VK_TOKEN')
+
+    while True:
+        try:
+            run_chatbot(vk_token, questions)
+
+        except Exception as err:
+            logger.error(f'Бот "{__file__}" упал с ошибкой.')
+            logger.exception(err)
+
+            continue
 
 
 if __name__ == "__main__":
