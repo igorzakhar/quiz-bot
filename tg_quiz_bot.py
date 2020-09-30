@@ -30,7 +30,7 @@ def remove_comments(answer):
 
 def start(bot, update):
     """Send a message when the command /start is issued."""
-    keyboard = [['Новый вопрос', 'Сдаться'], ['Мой счёт']]
+    keyboard = [['Новый вопрос', 'Сдаться']]
     kb_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     start_message = (
         'Приветствую! Нажмите «Новый вопрос» для начала викторины.\n'
@@ -103,11 +103,7 @@ def error(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 
-def main():
-    load_dotenv()
-    questions = load_questions()
-
-    tg_token = os.getenv('TELEGRAM_TOKEN')
+def run_chatbot(token, questions):
     redis_host = os.getenv('REDIS_HOST')
     redis_port = os.getenv('REDIS_PORT')
     redis_password = os.getenv('REDIS_PASSWORD')
@@ -120,9 +116,8 @@ def main():
         decode_responses=True
     )
 
-    """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater(tg_token)
+    updater = Updater(token)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
@@ -173,6 +168,23 @@ def main():
     # SIGTERM or SIGABRT. This should be used most of the time, since
     # start_polling() is non-blocking and will stop the bot gracefully.
     updater.idle()
+
+
+def main():
+    load_dotenv()
+    questions = load_questions()
+    tg_token = os.getenv('TELEGRAM_TOKEN')
+
+    while True:
+        try:
+            run_chatbot(tg_token, questions)
+
+        except Exception as err:
+            print(err)
+            logger.error(f'Бот "{__name__}" упал с ошибкой')
+            logger.exception(err)
+
+            continue
 
 
 if __name__ == '__main__':
