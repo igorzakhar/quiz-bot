@@ -2,6 +2,12 @@
 
 Данный репозиторий содержит ботов, с помощью которых можно проводить викторины в "Telegram" и "VKontakte".
 
+Пример результата для Telegram:
+![Telegram animation](https://github.com/igorzakhar/quiz-bot/blob/master/screenshots/tg_example.gif)
+
+Пример результата для Вконтакте:
+![VKontakte animation](https://github.com/igorzakhar/quiz-bot/blob/master/screenshots/vk_example.gif)
+
 ## Как установить
 
 Для запуска ботов нужен предустановленный Python версии не ниже 3.7+ (на других версиях не проверялся).
@@ -36,7 +42,12 @@ $ pip install -r requirements.txt # В качестве альтернативы
 
 2. Заведите аккаунт в [Redislabs](https://redislabs.com/) и создайте базу данных. После создания вы получите адрес базы данных вида: ```redis-13965.f18.us-east-4-9.wc1.cloud.redislabs.com```, его порт вида: ```16635```(порт указан прямо в адресе, через двоеточие) и его пароль.
 
-3. Создайте группу (сообщество) в соц. сети "ВКонтакте". Получите токен группы в настройках сообщества. Так же в настройках нужно разрешить отправку сообщений.
+3. Создайте группу (сообщество) в соц. сети "ВКонтакте".
+- Получите токен группы в настройках сообщества:
+![VKontakte API key](https://github.com/igorzakhar/quiz-bot/blob/master/screenshots/)
+
+- Так же в настройках нужно разрешить отправку сообщений:
+![VKontakte send message setting](https://github.com/igorzakhar/quiz-bot/blob/master/screenshots/)
 
 4. Создайте ```.env``` файл c необходимыми параметрами, такими как:
 ```
@@ -71,7 +82,6 @@ VK_TOKEN=
 
 Ответ:
 Лошади.
-
 
 ```
 
