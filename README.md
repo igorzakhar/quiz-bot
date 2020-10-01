@@ -44,10 +44,10 @@ $ pip install -r requirements.txt # В качестве альтернативы
 
 3. Создайте группу (сообщество) в соц. сети "ВКонтакте".
 - Получите токен группы в настройках сообщества:
-![VKontakte API key](https://github.com/igorzakhar/quiz-bot/blob/master/screenshots/)
+![VKontakte API key](https://github.com/igorzakhar/quiz-bot/blob/master/screenshots/screenshot_from_2019-04-29_20-10-16.png)
 
 - Так же в настройках нужно разрешить отправку сообщений:
-![VKontakte send message setting](https://github.com/igorzakhar/quiz-bot/blob/master/screenshots/)
+![VKontakte send message setting](https://github.com/igorzakhar/quiz-bot/blob/master/screenshots/screenshot_from_2019-04-29_20-15-54.png)
 
 4. Создайте ```.env``` файл c необходимыми параметрами, такими как:
 ```
