@@ -9,7 +9,6 @@ import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.utils import get_random_id
-from dotenv import load_dotenv
 
 from load_questions import load_questions
 
@@ -125,7 +124,6 @@ def run_chatbot(token, questions):
 
 
 def main():
-    load_dotenv()
     questions = load_questions()
     vk_token = os.getenv('VK_TOKEN')
 

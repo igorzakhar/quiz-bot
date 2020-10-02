@@ -6,7 +6,6 @@ import re
 
 import redis
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
-from dotenv import load_dotenv
 from telegram.ext import (
     Updater,
     CommandHandler,
@@ -171,7 +170,6 @@ def run_chatbot(token, questions):
 
 
 def main():
-    load_dotenv()
     questions = load_questions()
     tg_token = os.getenv('TELEGRAM_TOKEN')
 
