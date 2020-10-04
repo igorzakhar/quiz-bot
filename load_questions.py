@@ -3,14 +3,13 @@ import os
 
 def extract_questions(text):
     questions = {}
-    question, answer = None, None
 
     for contents in text:
         if 'Вопрос' in contents:
             question = ' '.join(contents.strip().splitlines()[1:])
+            continue
         elif 'Ответ' in contents:
             answer = ' '.join(contents.strip().splitlines()[1:])
-        if question and answer:
             questions[question] = answer
 
     return questions
