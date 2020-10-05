@@ -1,4 +1,5 @@
 import functools
+import json
 import logging
 import os
 import random
@@ -14,9 +15,6 @@ from telegram.ext import (
     Filters,
     ConversationHandler
 )
-
-from load_questions import load_questions
-
 
 logger = logging.getLogger(__name__)
 
@@ -40,30 +38,52 @@ def start(bot, update):
     return CHOOSING
 
 
-def handle_new_question_request(bot, update, questions, redis_conn):
-    question = random.choice(list(questions.keys()))
-
-    logger.debug(
-        f'user_id: {update.message.from_user.id}. '
-        f'Question: {question} '
-        f'Answer: {questions.get(question)}'
+def get_answer_question(update, redis_conn):
+    user_redis_value = json.loads(
+        redis_conn.hget('users', f'user_tg_{update.message.from_user.id}')
     )
 
-    redis_conn.set(update.message.from_user.id, question)
+    qa = json.loads(
+        redis_conn.hget(
+            'questions',
+            user_redis_value.get('last_asked_question')
+        )
+    )
+
+    answer = qa.get('answer')
+
+    return answer
+
+
+def handle_new_question_request(bot, update, redis_conn):
+    question_num = random.choice(redis_conn.hkeys('questions'))
+    redis_conn.hset(
+        'users',
+        f'user_tg_{update.message.from_user.id}',
+        json.dumps({'last_asked_question': question_num})
+    )
+
+    qa = json.loads(redis_conn.hget('questions', question_num))
+    question = qa.get('question')
+
+    logger.debug(
+        f'question: {question} '
+        f'answer: {qa.get("answer")}'
+    )
+
     update.message.reply_text(question)
 
     return ATTEMPT
 
 
-def handle_solution_attempt(bot, update, questions, redis_conn):
-    current_question = redis_conn.get(update.message.from_user.id)
-    answer = questions.get(current_question)
+def handle_solution_attempt(bot, update, redis_conn):
+    answer = get_answer_question(update, redis_conn)
     user_response = update.message.text
     correct_answer = remove_comments(answer).lower().strip('.')
 
     logger.debug(
-        f'User response: {user_response} '
-        f'Correct answer: {correct_answer}'
+        f'user_response: {user_response.lower()} '
+        f'correct_answer: {correct_answer} '
     )
 
     if user_response.lower() == correct_answer:
@@ -78,9 +98,8 @@ def handle_solution_attempt(bot, update, questions, redis_conn):
         return ATTEMPT
 
 
-def handle_give_up(bot, update, questions, redis_conn):
-    current_question = redis_conn.get(update.message.from_user.id)
-    answer = questions.get(current_question)
+def handle_give_up(bot, update, redis_conn):
+    answer = get_answer_question(update, redis_conn)
     update.message.reply_text(
         f'Вот тебе правильный ответ: {answer} '
         'Чтобы продолжить нажми «Новый вопрос»'
@@ -102,7 +121,7 @@ def error(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 
-def run_chatbot(token, questions):
+def run_chatbot(token):
     redis_host = os.getenv('REDIS_HOST')
     redis_port = os.getenv('REDIS_PORT')
     redis_password = os.getenv('REDIS_PASSWORD')
@@ -123,19 +142,16 @@ def run_chatbot(token, questions):
 
     handle_new_question = functools.partial(
         handle_new_question_request,
-        questions=questions,
         redis_conn=redis_conn
     )
 
     handle_solution = functools.partial(
         handle_solution_attempt,
-        questions=questions,
         redis_conn=redis_conn
     )
 
     handle_giveup = functools.partial(
         handle_give_up,
-        questions=questions,
         redis_conn=redis_conn
     )
 
@@ -170,12 +186,11 @@ def run_chatbot(token, questions):
 
 
 def main():
-    questions = load_questions()
     tg_token = os.getenv('TELEGRAM_TOKEN')
 
     while True:
         try:
-            run_chatbot(tg_token, questions)
+            run_chatbot(tg_token)
 
         except Exception as err:
             print(err)
