@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import random
@@ -9,8 +10,6 @@ import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.utils import get_random_id
-
-from load_questions import load_questions
 
 
 logger = logging.getLogger(__name__)
@@ -29,35 +28,48 @@ def get_custom_keyboard():
     return keyboard.get_keyboard()
 
 
-def handle_new_question(event, vk, questions, redis_conn):
-    question = random.choice(list(questions.keys()))
+def handle_new_question(event, vk, redis_conn):
+    question_num = random.choice(redis_conn.hkeys('questions'))
+    redis_conn.hset(
+        'users',
+        f'user_vk_{event.user_id}',
+        json.dumps({'last_asked_question': question_num})
+    )
 
-    redis_conn.set(event.user_id, question)
-
-    logger.debug(
-        f'user_id: {event.user_id}. '
-        f'Question: {question} '
-        f'Answer: {questions.get(question)}'
+    qa = json.loads(
+        redis_conn.hget('questions', question_num)
     )
 
     vk.messages.send(
         peer_id=event.user_id,
         random_id=get_random_id(),
         keyboard=get_custom_keyboard(),
-        message=question
+        message=qa.get('question')
     )
 
 
-def handle_solution_attempt(event, vk, questions, redis_conn):
-    current_question = redis_conn.get(event.user_id)
-    answer = questions.get(current_question)
+def get_answer_question(event, redis_conn):
+    user_redis_value = json.loads(
+        redis_conn.hget('users', f'user_vk_{event.user_id}')
+    )
+
+    qa = json.loads(
+        redis_conn.hget(
+            'questions',
+            user_redis_value.get('last_asked_question')
+        )
+    )
+
+    answer = qa.get('answer')
+
+    return answer
+
+
+def handle_solution_attempt(event, vk, redis_conn):
+    answer = get_answer_question(event, redis_conn)
+
     user_response = event.text
     correct_answer = remove_comments(answer).lower().strip('.')
-
-    logger.debug(
-        f'User response: {user_response} '
-        f'Correct answer: {correct_answer}'
-    )
 
     if user_response.lower() == correct_answer:
         message = (
@@ -80,9 +92,9 @@ def handle_solution_attempt(event, vk, questions, redis_conn):
         )
 
 
-def handle_give_up(event, vk, questions, redis_conn):
-    current_question = redis_conn.get(event.user_id)
-    answer = questions.get(current_question)
+def handle_give_up(event, vk, redis_conn):
+    answer = get_answer_question(event, redis_conn)
+
     response = (
         f'Вот тебе правильный ответ: {answer} '
         'Чтобы продолжить нажми «Новый вопрос»'
@@ -96,7 +108,7 @@ def handle_give_up(event, vk, questions, redis_conn):
     )
 
 
-def run_chatbot(token, questions):
+def run_chatbot(token):
     vk_session = vk_api.VkApi(token=token)
     api_vk = vk_session.get_api()
     longpoll = VkLongPoll(vk_session)
@@ -116,20 +128,19 @@ def run_chatbot(token, questions):
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             if event.text == 'Новый вопрос':
-                handle_new_question(event, api_vk, questions, redis_conn)
+                handle_new_question(event, api_vk, redis_conn)
             elif event.text == 'Сдаться':
-                handle_give_up(event, api_vk, questions, redis_conn)
+                handle_give_up(event, api_vk, redis_conn)
             else:
-                handle_solution_attempt(event, api_vk, questions, redis_conn)
+                handle_solution_attempt(event, api_vk, redis_conn)
 
 
 def main():
-    questions = load_questions()
     vk_token = os.getenv('VK_TOKEN')
 
     while True:
         try:
-            run_chatbot(vk_token, questions)
+            run_chatbot(vk_token)
 
         except Exception as err:
             logger.error(f'Бот "{__file__}" упал с ошибкой.')
