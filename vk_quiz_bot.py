@@ -36,15 +36,14 @@ def handle_new_question(event, vk, redis_conn):
         json.dumps({'last_asked_question': question_num})
     )
 
-    qa = json.loads(
-        redis_conn.hget('questions', question_num)
-    )
+    qa = json.loads(redis_conn.hget('questions', question_num))
+    question = qa.get('question')
 
     vk.messages.send(
         peer_id=event.user_id,
         random_id=get_random_id(),
         keyboard=get_custom_keyboard(),
-        message=qa.get('question')
+        message=question
     )
 
 
