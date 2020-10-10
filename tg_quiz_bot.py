@@ -4,6 +4,7 @@ import logging
 import os
 import random
 import re
+import textwrap
 
 import redis
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
@@ -22,16 +23,18 @@ CHOOSING, ATTEMPT = range(2)
 
 
 def remove_comments(answer):
-    return re.sub("[\(\[].*?[\)\]]", "", answer).strip()
+    return re.sub(r"[\(\[].*?[\)\]]", "", answer).strip()
 
 
 def start(bot, update):
     """Send a message when the command /start is issued."""
     keyboard = [['Новый вопрос', 'Сдаться']]
     kb_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    start_message = (
-        'Приветствую! Нажмите «Новый вопрос» для начала викторины.\n'
-        '/cancel - для отмены.'
+    start_message = textwrap.dedent(
+        '''\
+        Приветствую! Нажмите «Новый вопрос» для начала викторины.
+        /cancel - для отмены.
+        '''
     )
     update.message.reply_text(start_message, reply_markup=kb_markup)
 
@@ -138,7 +141,7 @@ def run_chatbot(token):
     updater = Updater(token)
 
     # Get the dispatcher to register handlers
-    dp = updater.dispatcher
+    handlers_dispatcher = updater.dispatcher
 
     handle_new_question = functools.partial(
         handle_new_question_request,
@@ -155,7 +158,7 @@ def run_chatbot(token):
         redis_conn=redis_conn
     )
 
-    conv_handler = ConversationHandler(
+    conversation_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
 
         states={
@@ -171,10 +174,10 @@ def run_chatbot(token):
 
     )
 
-    dp.add_handler(conv_handler)
+    handlers_dispatcher.add_handler(conversation_handler)
 
     # log all errors
-    dp.add_error_handler(error)
+    handlers_dispatcher.add_error_handler(error)
 
     # Start the Bot
     updater.start_polling()

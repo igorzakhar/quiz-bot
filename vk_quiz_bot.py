@@ -135,6 +135,10 @@ def run_chatbot(token):
 
 
 def main():
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO
+    )
     vk_token = os.getenv('VK_TOKEN')
 
     while True:
@@ -149,11 +153,6 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.getLogger(__name__).setLevel(logging.DEBUG)
-    logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=logging.INFO
-    )
     try:
         main()
     except KeyboardInterrupt:
