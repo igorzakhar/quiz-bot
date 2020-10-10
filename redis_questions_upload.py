@@ -8,13 +8,15 @@ from dotenv import load_dotenv
 def upload_questions_into_redis(text, redis_conn, hash_name='questions'):
     counter = redis_conn.hlen(hash_name)
 
-    for contents in text:
-        if contents.strip().startswith('Вопрос'):
-            question = ' '.join(contents.strip().splitlines()[1:])
+    sections_text = text.split('\n\n')
+
+    for section in sections_text:
+        if section.strip().startswith('Вопрос'):
+            question = ' '.join(section.strip().splitlines()[1:])
             continue
 
-        if contents.strip().startswith('Ответ'):
-            answer = ' '.join(contents.strip().splitlines()[1:])
+        if section.strip().startswith('Ответ'):
+            answer = ' '.join(section.strip().splitlines()[1:])
             counter += 1
             redis_conn.hset(
                 hash_name,
@@ -26,7 +28,7 @@ def upload_questions_into_redis(text, redis_conn, hash_name='questions'):
 def read_files(directory='quiz-questions'):
     for file in os.listdir(os.path.abspath(directory)):
         with open(f'{directory}/{file}', 'r', encoding='KOI8-R') as file:
-            text = file.read().split('\n\n')
+            text = file.read()
             yield text
 
 
