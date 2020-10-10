@@ -186,24 +186,14 @@ def run_chatbot(token):
 
 
 def main():
-    tg_token = os.getenv('TELEGRAM_TOKEN')
-
-    while True:
-        try:
-            run_chatbot(tg_token)
-
-        except Exception as err:
-            print(err)
-            logger.error(f'Бот "{__name__}" упал с ошибкой')
-            logger.exception(err)
-
-            continue
-
-
-if __name__ == '__main__':
-    logging.getLogger(__name__).setLevel(logging.DEBUG)
     logging.basicConfig(
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO
     )
+    tg_token = os.getenv('TELEGRAM_TOKEN')
+
+    run_chatbot(tg_token)
+
+
+if __name__ == '__main__':
     main()
