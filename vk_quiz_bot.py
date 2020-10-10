@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import random
-import re
 import sys
 
 import redis
@@ -11,12 +10,10 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.utils import get_random_id
 
+from answer_tools import remove_comments
+
 
 logger = logging.getLogger(__name__)
-
-
-def remove_comments(answer):
-    return re.sub("[\(\[].*?[\)\]]", "", answer).strip()
 
 
 def get_custom_keyboard():

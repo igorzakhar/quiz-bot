@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import random
-import re
 import textwrap
 
 import redis
@@ -17,13 +16,12 @@ from telegram.ext import (
     ConversationHandler
 )
 
+from answer_tools import remove_comments
+
+
 logger = logging.getLogger(__name__)
 
 CHOOSING, ATTEMPT = range(2)
-
-
-def remove_comments(answer):
-    return re.sub(r"[\(\[].*?[\)\]]", "", answer).strip()
 
 
 def start(bot, update):
