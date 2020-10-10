@@ -25,7 +25,7 @@ def upload_questions_into_redis(text, redis_conn, hash_name='questions'):
             )
 
 
-def read_files(directory='quiz-questions'):
+def read_quiz_files(directory='quiz-questions'):
     for file in os.listdir(os.path.abspath(directory)):
         with open(f'{directory}/{file}', 'r', encoding='KOI8-R') as file:
             text = file.read()
@@ -33,7 +33,7 @@ def read_files(directory='quiz-questions'):
 
 
 def upload_questions(redis_conn):
-    for text in read_files():
+    for text in read_quiz_files():
         upload_questions_into_redis(text, redis_conn)
 
 
