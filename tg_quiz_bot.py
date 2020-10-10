@@ -16,7 +16,7 @@ from telegram.ext import (
     ConversationHandler
 )
 
-from answer_tools import remove_comments
+from answer_tools import remove_comments, get_answer_question
 
 
 logger = logging.getLogger(__name__)
@@ -37,23 +37,6 @@ def start(bot, update):
     update.message.reply_text(start_message, reply_markup=kb_markup)
 
     return CHOOSING
-
-
-def get_answer_question(update, redis_conn):
-    user_redis_value = json.loads(
-        redis_conn.hget('users', f'user_tg_{update.message.from_user.id}')
-    )
-
-    qa = json.loads(
-        redis_conn.hget(
-            'questions',
-            user_redis_value.get('last_asked_question')
-        )
-    )
-
-    answer = qa.get('answer')
-
-    return answer
 
 
 def handle_new_question_request(bot, update, redis_conn):
@@ -78,7 +61,8 @@ def handle_new_question_request(bot, update, redis_conn):
 
 
 def handle_solution_attempt(bot, update, redis_conn):
-    answer = get_answer_question(update, redis_conn)
+    user_id = update.message.from_user.id
+    answer = get_answer_question(user_id, redis_conn)
     user_response = update.message.text
     correct_answer = remove_comments(answer).lower().strip('.')
 
@@ -100,7 +84,8 @@ def handle_solution_attempt(bot, update, redis_conn):
 
 
 def handle_give_up(bot, update, redis_conn):
-    answer = get_answer_question(update, redis_conn)
+    user_id = update.message.from_user.id
+    answer = get_answer_question(user_id, redis_conn)
     update.message.reply_text(
         f'Вот тебе правильный ответ: {answer} '
         'Чтобы продолжить нажми «Новый вопрос»'
@@ -187,6 +172,7 @@ def run_chatbot(token):
 
 
 def main():
+    logging.getLogger(__name__).setLevel(logging.INFO)
     logging.basicConfig(
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO

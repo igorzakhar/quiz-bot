@@ -10,7 +10,7 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.utils import get_random_id
 
-from answer_tools import remove_comments
+from answer_tools import remove_comments, get_answer_question
 
 
 logger = logging.getLogger(__name__)
@@ -44,25 +44,8 @@ def handle_new_question(event, vk, redis_conn):
     )
 
 
-def get_answer_question(event, redis_conn):
-    user_redis_value = json.loads(
-        redis_conn.hget('users', f'user_vk_{event.user_id}')
-    )
-
-    qa = json.loads(
-        redis_conn.hget(
-            'questions',
-            user_redis_value.get('last_asked_question')
-        )
-    )
-
-    answer = qa.get('answer')
-
-    return answer
-
-
 def handle_solution_attempt(event, vk, redis_conn):
-    answer = get_answer_question(event, redis_conn)
+    answer = get_answer_question(event.user_id, redis_conn, source='vk')
 
     user_response = event.text
     correct_answer = remove_comments(answer).lower().strip('.')
@@ -89,7 +72,7 @@ def handle_solution_attempt(event, vk, redis_conn):
 
 
 def handle_give_up(event, vk, redis_conn):
-    answer = get_answer_question(event, redis_conn)
+    answer = get_answer_question(event.user_id, redis_conn, source='vk')
 
     response = (
         f'Вот тебе правильный ответ: {answer} '
