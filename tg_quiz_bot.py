@@ -7,14 +7,12 @@ import textwrap
 
 import redis
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import (
-    Updater,
-    CommandHandler,
-    MessageHandler,
-    RegexHandler,
-    Filters,
-    ConversationHandler
-)
+from telegram.ext import CommandHandler
+from telegram.ext import ConversationHandler
+from telegram.ext import Filters
+from telegram.ext import MessageHandler
+from telegram.ext import RegexHandler
+from telegram.ext import Updater
 
 from answer_tools import remove_comments, get_answer_question
 
