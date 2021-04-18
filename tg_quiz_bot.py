@@ -23,7 +23,6 @@ CHOOSING, ATTEMPT = range(2)
 
 
 def start(bot, update):
-    """Send a message when the command /start is issued."""
     keyboard = [['Новый вопрос', 'Сдаться']]
     kb_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     start_message = textwrap.dedent(
@@ -101,7 +100,6 @@ def cancel(bot, update):
 
 
 def error(bot, update, error):
-    """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 
@@ -118,10 +116,8 @@ def run_chatbot(token):
         decode_responses=True
     )
 
-    # Create the EventHandler and pass it your bot's token.
     updater = Updater(token)
 
-    # Get the dispatcher to register handlers
     handlers_dispatcher = updater.dispatcher
 
     handle_new_question = functools.partial(
@@ -156,16 +152,9 @@ def run_chatbot(token):
     )
 
     handlers_dispatcher.add_handler(conversation_handler)
-
-    # log all errors
     handlers_dispatcher.add_error_handler(error)
 
-    # Start the Bot
     updater.start_polling()
-
-    # Run the bot until you press Ctrl-C or the process receives SIGINT,
-    # SIGTERM or SIGABRT. This should be used most of the time, since
-    # start_polling() is non-blocking and will stop the bot gracefully.
     updater.idle()
 
 
