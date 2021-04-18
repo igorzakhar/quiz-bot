@@ -6,11 +6,15 @@ import sys
 
 import redis
 import vk_api
-from vk_api.longpoll import VkLongPoll, VkEventType
-from vk_api.keyboard import VkKeyboard, VkKeyboardColor
+
+from vk_api.keyboard import VkKeyboard
+from vk_api.keyboard import VkKeyboardColor
+from vk_api.longpoll import VkEventType
+from vk_api.longpoll import VkLongPoll
 from vk_api.utils import get_random_id
 
-from answer_tools import remove_comments, get_answer_question
+from answer_tools import get_answer_question
+from answer_tools import remove_comments
 
 
 logger = logging.getLogger(__name__)
@@ -87,31 +91,32 @@ def handle_give_up(event, vk, redis_conn):
     )
 
 
-def run_chatbot(token):
+def run_chatbot(token, redis_host, redis_port, redis_pass):
     vk_session = vk_api.VkApi(token=token)
     api_vk = vk_session.get_api()
     longpoll = VkLongPoll(vk_session)
 
-    redis_host = os.getenv('REDIS_HOST')
-    redis_port = os.getenv('REDIS_PORT')
-    redis_password = os.getenv('REDIS_PASSWORD')
-
     redis_conn = redis.Redis(
         host=redis_host,
         port=redis_port,
-        password=redis_password,
+        password=redis_pass,
         charset='utf-8',
         decode_responses=True
     )
 
     for event in longpoll.listen():
-        if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-            if event.text == 'Новый вопрос':
-                handle_new_question(event, api_vk, redis_conn)
-            elif event.text == 'Сдаться':
-                handle_give_up(event, api_vk, redis_conn)
-            else:
-                handle_solution_attempt(event, api_vk, redis_conn)
+        if not (event.type == VkEventType.MESSAGE_NEW and event.to_me):
+            continue
+
+        if event.text == 'Новый вопрос':
+            handle_new_question(event, api_vk, redis_conn)
+            continue
+
+        if event.text == 'Сдаться':
+            handle_give_up(event, api_vk, redis_conn)
+            continue
+
+        handle_solution_attempt(event, api_vk, redis_conn)
 
 
 def main():
@@ -119,11 +124,15 @@ def main():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO
     )
+
     vk_token = os.getenv('VK_TOKEN')
+    redis_host = os.getenv('REDIS_HOST')
+    redis_port = os.getenv('REDIS_PORT')
+    redis_password = os.getenv('REDIS_PASSWORD')
 
     while True:
         try:
-            run_chatbot(vk_token)
+            run_chatbot(vk_token, redis_host, redis_port, redis_password)
 
         except Exception as err:
             logger.error(f'Бот "{__file__}" упал с ошибкой.')
