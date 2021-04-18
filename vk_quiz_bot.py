@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import sys
+import textwrap
 
 import redis
 import vk_api
@@ -55,9 +56,11 @@ def handle_solution_attempt(event, vk, redis_conn):
     correct_answer = remove_comments(answer).lower().strip('.')
 
     if user_response.lower() == correct_answer:
-        message = (
-            'Правильно! Поздравляю! '
-            'Для следующего вопроса нажми «Новый вопрос».'
+        message = textwrap.dedent(
+            '''
+            Правильно! Поздравляю!
+            Для следующего вопроса нажми «Новый вопрос».
+            '''
         )
         vk.messages.send(
             peer_id=event.user_id,
