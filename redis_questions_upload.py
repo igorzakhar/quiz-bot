@@ -5,36 +5,32 @@ import redis
 from dotenv import load_dotenv
 
 
-def upload_questions_into_redis(text, redis_conn, hash_name='questions'):
-    counter = redis_conn.hlen(hash_name)
-
-    sections_text = text.split('\n\n')
-
-    for section in sections_text:
-        if section.strip().startswith('Вопрос'):
-            question = ' '.join(section.strip().splitlines()[1:])
-            continue
-
-        if section.strip().startswith('Ответ'):
-            answer = ' '.join(section.strip().splitlines()[1:])
-            counter += 1
-            redis_conn.hset(
-                hash_name,
-                f'question_{counter}',
-                json.dumps({'question': question, 'answer': answer})
-            )
-
-
-def read_quiz_files(directory='quiz-questions'):
+def read_quiz_files(directory='quiz-questions', file_encoding='KOI8-R'):
     for file in os.listdir(os.path.abspath(directory)):
-        with open(f'{directory}/{file}', 'r', encoding='KOI8-R') as file:
+        with open(f'{directory}/{file}', 'r', encoding=file_encoding) as file:
             text = file.read()
             yield text
 
 
-def upload_questions(redis_conn):
+def upload_questions_into_redis(redis_conn, hash_name='questions'):
     for text in read_quiz_files():
-        upload_questions_into_redis(text, redis_conn)
+        counter = redis_conn.hlen(hash_name)
+
+        sections_text = text.split('\n\n')
+
+        for section in sections_text:
+            if section.strip().startswith('Вопрос'):
+                question = ' '.join(section.strip().splitlines()[1:])
+                continue
+
+            if section.strip().startswith('Ответ'):
+                answer = ' '.join(section.strip().splitlines()[1:])
+                counter += 1
+                redis_conn.hset(
+                    hash_name,
+                    f'question_{counter}',
+                    json.dumps({'question': question, 'answer': answer})
+                )
 
 
 def main():
@@ -52,7 +48,7 @@ def main():
         decode_responses=True
     )
 
-    upload_questions(redis_conn)
+    upload_questions_into_redis(redis_conn)
 
 
 if __name__ == '__main__':
