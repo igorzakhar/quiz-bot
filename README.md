@@ -2,12 +2,12 @@
 
 Данный репозиторий содержит ботов, с помощью которых можно проводить викторины в "Telegram" и "VKontakte".
 
-### Демо чат-бот для Telegram [https://t.me/yet_another_quiz_bot](https://t.me/yet_another_quiz_bot)
 Пример результата для Telegram:
+
 ![Telegram animation](https://github.com/igorzakhar/quiz-bot/blob/master/screenshots/tg_example.gif)
 
-### Демо чат-бот для Вконтакте [https://vk.com/im?media=&sel=-199078732](https://vk.com/im?media=&sel=-199078732)
 Пример результата для Вконтакте:
+
 ![VKontakte animation](https://github.com/igorzakhar/quiz-bot/blob/master/screenshots/vk_example.gif)
 
 ## Как установить
