@@ -2,11 +2,11 @@
 
 Данный репозиторий содержит ботов, с помощью которых можно проводить викторины в "Telegram" и "VKontakte".
 
-Пример результата для Telegram:
+Пример работы бота для Telegram:
 
 ![Telegram animation](https://github.com/igorzakhar/quiz-bot/blob/master/screenshots/tg_example.gif)
 
-Пример результата для Вконтакте:
+Пример работы бота для Вконтакте:
 
 ![VKontakte animation](https://github.com/igorzakhar/quiz-bot/blob/master/screenshots/vk_example.gif)
 
